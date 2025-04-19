@@ -182,10 +182,33 @@ def extract_features_from_url(url):
 
     return features
 
-# Prediction function
-def predict_phishing(url):
+# Function to extract URLs from a string (email body)
+def extract_urls_from_text(text):
+    url_pattern = r'https?://[^\s<>"]+|www\.[^\s<>"]+'
+    return re.findall(url_pattern, text)
+
+# Function to process an email body and classify all URLs found
+def process_email_body(email_body):
+    urls = extract_urls_from_text(email_body)
+    results = []
+    for url in urls:
+        try:
+            label = _predict_single_url(url)
+            results.append((url, label))
+        except Exception as e:
+            print(f"Failed to process URL: {url}\nError: {e}\n")
+    return results
+
+# Internal prediction function for a single URL
+def _predict_single_url(url):
     features = extract_features_from_url(url)
     feature_df = pd.DataFrame([features])
     prediction = model.predict(feature_df)[0]
     label = "Phishing" if prediction == 1 else "Legitimate"
     return label
+
+# Public prediction function
+def predict_phishing(body):
+    results = process_email_body(body)
+    is_spam = any(label == "Phishing" for _, label in results)
+    return is_spam
